@@ -4,6 +4,7 @@ from fastapi import FastAPI, File, UploadFile
 from typing_extensions import Annotated
 import config
 from openai import OpenAI
+import base64
 
 app = FastAPI(
     title="Image To Audio API",
@@ -21,7 +22,20 @@ async def status():
 
 @app.post("/img2text")
 async def img2text(settings: Annotated[config.Settings, Depends(get_settings)],file: UploadFile):
-    
+
+    ext = file.filename.split(".")[-1].lower()
+    if ext not in ["jpg", "jpeg", "png"]:
+        return {"error": "Unsupported file format. Please upload a JPG or PNG image."}
+
+    content = await file.read()
+    size_mb = len(content) / (1024 * 1024)
+    if size_mb > 10:
+        return {"error": "File size exceeds 10 MB limit."}
+
+    base64_image = base64.b64encode(content).decode("utf-8")
+    data_url = f"data:image/{ext};base64,{base64_image}"
+
+
     client = OpenAI(
         api_key=settings.openai_secret,
     )
@@ -47,20 +61,17 @@ async def img2text(settings: Annotated[config.Settings, Depends(get_settings)],f
                 {"type": "input_text", "text": prompt},
                 {
                     "type": "input_image",
-                    "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg",
+                    "image_url": data_url,
                 },
             ],
         }],
-    )
+    )    
 
-    print(response.output_text)
-    
-    print(f"Received file: {settings.openia_secret}")
     mb = file.size / (1024 * 1024)
     if mb > 10:
         return {"error": "File size exceeds 10 MB limit."}
     if file.filename.split(".")[-1].lower() not in ["jpg", "jpeg", "png"]:
         return {"error": "Unsupported file format. Please upload a JPG or PNG image."}
 
-    return {"message": "This endpoint will convert an image to text."}
+    return {"message": response.output_text}
 
