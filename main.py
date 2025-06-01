@@ -6,9 +6,9 @@ from pathlib import Path
 from fastapi.responses import FileResponse
 
 from openai import OpenAI
-import config
 from app.api.v1.endpoints import image_text
 from app.api.v1.endpoints import text_to_audio
+from app.api.v1.endpoints import image_to_audio
 
 app = FastAPI(
     title="Image To Audio API",
@@ -16,9 +16,6 @@ app = FastAPI(
     version="1.0.0",
 )
 
-@lru_cache
-def get_settings():
-    return config.Settings()
 
 @app.get("/status")
 async def status():
@@ -26,3 +23,4 @@ async def status():
 
 app.include_router(image_text.router, prefix="/api/v1", tags=["Image to Text"])
 app.include_router(text_to_audio.router, prefix="/api/v1", tags=["Text to Audio"])
+app.include_router(image_to_audio.router, prefix="/api/v1", tags=["Image to Audio"])
